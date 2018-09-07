@@ -1,5 +1,7 @@
 # Directory
+BUILD
 BUILD/*
+mbed-os
 mbed-os/*
 
 # File type
