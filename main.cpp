@@ -37,8 +37,8 @@ Serial g_Serial_pc(USBTX, USBRX, BAUDRATE);
 /* DigitalOut */
 #define LED_ON      0
 #define LED_OFF     1
-DigitalOut g_DO_LedRed(LED_RED, LED_OFF);
-DigitalOut g_DO_LedGreen(LED_GREEN, LED_OFF);
+DigitalOut g_DO_LedRed(LED_RED, LED_OFF);       // For SDT52832B, the GPIO0 operates as an NFC function and cannot serve as LED0
+DigitalOut g_DO_LedGreen(LED_GREEN, LED_OFF);   // For SDT52832B, the GPIO1 operates as an NFC function and cannot serve as LED1
 DigitalOut g_DO_LedBlue(LED_BLUE, LED_OFF);
 DigitalOut* g_pDO_Led = &g_DO_LedBlue;
 
@@ -58,27 +58,7 @@ bool g_b_BleConnect = false;
 
 
 void callbackTicker(void) {
-    g_Serial_pc.printf("LED Toggle\n");
-    // *g_pDO_Led = !(*g_pDO_Led);
-}
-
-void setLED(char data) {
-    if (data <= 0) {
-        return;
-    }
-
-    if (data == 'R' || data == 'r') {
-        g_DO_LedRed = 0; g_DO_LedGreen = 1; g_DO_LedBlue = 1;
-    }
-    else if (data == 'G' || data == 'g') {
-        g_DO_LedRed = 1; g_DO_LedGreen = 0; g_DO_LedBlue = 1;
-    }
-    else if (data == 'B' || data == 'b') {
-        g_DO_LedRed = 1; g_DO_LedGreen = 1; g_DO_LedBlue = 0;
-    }
-    else {
-        g_DO_LedRed = 1; g_DO_LedGreen = 1; g_DO_LedBlue = 1;
-    }
+    *g_pDO_Led = !(*g_pDO_Led);
 }
 
 void callbackBleDataWritten(const GattWriteCallbackParams* params) {
@@ -86,25 +66,22 @@ void callbackBleDataWritten(const GattWriteCallbackParams* params) {
         uint16_t bytesRead = params->len;
         const uint8_t* pBleRxBuf = params->data;
         g_Serial_pc.printf("data from BLE: %s\r\n", pBleRxBuf);
-
         g_pBle.gattServer().write(g_pUartService->getRXCharacteristicHandle(), pBleRxBuf, bytesRead);
-        setLED(pBleRxBuf[0]);
     }
 }
 
 void callbackBleConnection(const Gap::ConnectionCallbackParams_t* params) {
     g_Serial_pc.printf("Connected!\n");
     g_b_BleConnect = true;
-    *g_pDO_Led = LED_OFF;
-    g_pDO_Led = &g_DO_LedGreen;
+    g_Ticker.attach(callbackTicker, 1);
 }
 
 void callbackBleDisconnection(const Gap::DisconnectionCallbackParams_t* params) {
     g_Serial_pc.printf("Disconnected!\n");
     g_Serial_pc.printf("Restarting the advertising process\n\r");
     g_b_BleConnect = false;
-    *g_pDO_Led = LED_OFF;
-    g_pDO_Led = &g_DO_LedBlue;
+    g_Ticker.detach();
+    *g_pDO_Led = LED_ON;
     g_pBle.gap().startAdvertising();
 }
 
@@ -151,7 +128,7 @@ int main(void) {
     g_pBle.init(callbackBleInitComplete);
 
     /* Check whether IC is running or not */
-    g_Ticker.attach(callbackTicker, 1);
+    *g_pDO_Led = LED_ON;
 
     while (true) {
         g_pBle.waitForEvent();
