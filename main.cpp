@@ -58,7 +58,6 @@ bool b_bleConnect = false;
 
 
 void callbackTicker(void) {
-    serial_pc.printf("LED Toggle\n");
     *pDO_led = !(*pDO_led);
 }
 
